@@ -52,14 +52,116 @@ document.querySelector('#btn-login').addEventListener('click', () => {
     }
 });
 
-// 5. Lógica de Submissão de Cadastro (Onde aplicaremos as RegEx)
-document.querySelector('#form-cadastro').addEventListener('submit', (e) => {
+// 5. Lógica de Submissão de Cadastro com validação por Regex e integração com a API
+const formularioCadastro = document.querySelector('#form-cadastro');
+const cadastroErro = document.querySelector('#cadastro-erro');
+
+formularioCadastro.addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    // TODO: Os alunos vão validar os campos com RegEx e conferir se as senhas coincidem.
-    // Após a validação com sucesso, transita para a tela de análise:
-    secaoCadastro.style.display = 'none';
-    secaoSucesso.style.display = 'block';
+    const nome = document.querySelector('#cad-nome');
+    const cpf = document.querySelector('#cad-cpf');
+    const email = document.querySelector('#cad-email');
+    const celular = document.querySelector('#cad-celular');
+    const cep = document.querySelector('#cad-cep');
+    const endereco = document.querySelector('#cad-endereco');
+    const cidade = document.querySelector('#cad-cidade');
+    const estado = document.querySelector('#cad-estado');
+    const senha = document.querySelector('#cad-senha');
+    const confirmaSenha = document.querySelector('#cad-confirma-senha');
+
+    const validacoes = [
+        {
+            campo: nome,
+            regex: /^\p{L}+(?:\s+\p{L}+)+$/u,
+            mensagem: 'Informe o nome completo, com pelo menos nome e sobrenome.'
+        },
+        {
+            campo: cpf,
+            regex: /^(?:\d{11}|\d{3}\.\d{3}\.\d{3}-\d{2})$/,
+            mensagem: 'Informe um CPF válido com 11 dígitos, com ou sem pontuação.'
+        },
+        {
+            campo: email,
+            regex: /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/,
+            mensagem: 'Informe um endereço de e-mail válido.'
+        },
+        {
+            campo: celular,
+            regex: /^(?:\(\d{2}\)\s?|\d{2})\d{5}-?\d{4}$/,
+            mensagem: 'Informe um celular com DDD e 11 dígitos.'
+        },
+        {
+            campo: cep,
+            regex: /^(?:\d{8}|\d{5}-\d{3})$/,
+            mensagem: 'Informe um CEP válido com 8 dígitos, com ou sem hífen.'
+        },
+        {
+            campo: senha,
+            regex: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/,
+            mensagem: 'A senha deve ter no mínimo 8 caracteres, incluindo letra maiúscula, minúscula e número.'
+        }
+    ];
+
+    cadastroErro.textContent = '';
+    cadastroErro.style.display = 'none';
+
+    for (const validacao of validacoes) {
+        if (!validacao.regex.test(validacao.campo.value.trim())) {
+            cadastroErro.textContent = validacao.mensagem;
+            cadastroErro.style.display = 'block';
+            validacao.campo.focus();
+            return;
+        }
+    }
+
+    if (confirmaSenha.value !== senha.value) {
+        cadastroErro.textContent = 'A confirmação deve ser exatamente igual à senha informada.';
+        cadastroErro.style.display = 'block';
+        confirmaSenha.focus();
+        return;
+    }
+
+    const dadosCadastro = {
+        nome: nome.value.trim(),
+        cpf: cpf.value.trim(),
+        email: email.value.trim(),
+        celular: celular.value.trim(),
+        cep: cep.value.trim(),
+        endereco: endereco.value.trim(),
+        cidade: cidade.value.trim(),
+        estado: estado.value.trim(),
+        senha: senha.value
+    };
+
+    const botaoCadastrar = document.querySelector('#btn-cadastrar');
+    botaoCadastrar.disabled = true;
+    botaoCadastrar.textContent = 'Enviando...';
+
+    try {
+        const resposta = await fetch('https://senac-bank-api.dennislopes.com.br/api/clientes', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(dadosCadastro)
+        });
+
+        const resultado = await resposta.json().catch(() => ({}));
+
+        if (!resposta.ok) {
+            throw new Error(resultado.message || resultado.mensagem || 'Não foi possível concluir o cadastro. Verifique os dados e tente novamente.');
+        }
+
+        secaoCadastro.style.display = 'none';
+        secaoSucesso.style.display = 'block';
+    } catch (erro) {
+        cadastroErro.textContent = erro.message || 'Ocorreu um erro ao enviar o cadastro. Tente novamente.';
+        cadastroErro.style.display = 'block';
+    } finally {
+        botaoCadastrar.disabled = false;
+        botaoCadastrar.textContent = 'Concluir Registo';
+    }
 });
 
 // 6. Botão para voltar ao início a partir da tela de sucesso
